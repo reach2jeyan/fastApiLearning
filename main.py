@@ -4,9 +4,11 @@
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 from datetime import datetime, timedelta
 from http.client import HTTPException
+import json
 from typing import Union, Optional
 
 from fastapi import FastAPI, Request
+import uuid
 
 
 from dataSeed import userList, userCity
@@ -18,9 +20,26 @@ app = FastAPI()
 def read_root():
     return {"Hello": "World"}
 
-@app.get("/userDetails/")
+@app.get("/sonzLearning/userDetails/")
 def get_user():
         return userList
+
+@app.get("/sonzLearning/getAccessToken/")
+def get_access_token():
+        accessToken = {
+            "token": uuid.uuid4()
+        }
+        f = open("accessToken.json", "w")
+        f.write(str(json.dumps(str(accessToken["token"]))))
+        f.close()
+        return {
+            "accessToken": accessToken["token"]
+        }
+
+def validateAccessToken():
+    f = open("accessToken.json", "r")
+    data = json.load(f)
+    return data
 
 @app.get("/sonzLearning/userDetails/{user_id}")
 def get_user(user_id: Optional[int] = None):
@@ -33,16 +52,23 @@ def get_user(user_id: Optional[int] = None):
 
 
 @app.get("/sonzLearning/userCityHistory/")
-def read_item(user_city: str = None):
-    if user_city is not None:
-        matching_users = []
-        for user in userCity["userDetails"]:
-            for city in user["city"]:
-                if user_city in city:
-                    matching_users.append(user)
-        return matching_users
+def read_item(request: Request, user_city: str = None, ):
+    headers = request.headers
+    accessToken = headers.get('accessToken')
+    if accessToken != validateAccessToken():
+        return {
+            "error": "provide valid access token in the headers with keyName accessToken."
+        }
     else:
-        return userCity
+        if user_city is not None:
+            matching_users = []
+            for user in userCity["userDetails"]:
+                for city in user["city"]:
+                    if user_city in city:
+                        matching_users.append(user)
+            return matching_users
+        else:
+            return userCity
 
 
 @app.patch("/sonzLearning/update_user/{user_id}", response_model=dict | list)
@@ -51,7 +77,6 @@ def update_user(user_id: int, field_data: dict , request: Request):
     update_method = headers.get('update_method')
     if update_method == "single":
         for user in userList["userDetails"]:
-            print(user)
             if user["id"] == user_id:
 
                 field = field_data.get("field")
