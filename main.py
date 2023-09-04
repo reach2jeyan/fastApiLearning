@@ -71,7 +71,7 @@ def read_item(request: Request, user_city: str = None, ):
             return userCity
 
 
-@app.patch("/sonzLearning/update_user/{user_id}", response_model=dict | list)
+@app.put("/sonzLearning/update_user/{user_id}", response_model=dict | list)
 def update_user(user_id: int, field_data: dict , request: Request):
     headers = request.headers
     update_method = headers.get('update_method')
